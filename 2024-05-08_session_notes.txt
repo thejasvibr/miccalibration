@@ -1,0 +1,9 @@
+
+Distance speaker-mics :~ 3.4 m
+
+Gain setting on the TASCAM :
+	* 34 dB for the multisignal 
+	* 36 dB for the multi-chirp
+	* 36.5 dB for single chirp playedback again and again 
+
+laptop speaker volume level: 54

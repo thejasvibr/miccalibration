@@ -1,0 +1,53 @@
+Documentation Clipping point Edirol sound card 2024 05 13
+Thejasvi and Lena
+
+Installation:
+Keysight DSO-X 2004A Signal analyser generating sine tone 1khz -> Edirol UA25 (left channel) -> Audacity
+
+
+Files: 
+
+1_2_5Vpp_gainMinEdirol_2023-05-15
+	1, 2, 5 Vpp sine wave recordings at min gain (position 0) on the Edirol UA-25
+
+ClippingPoint_ppV_2023-05-13.wav
+	sensitivity medium (vertical) on edirol (to avoid max or min weird things)
+	recorded sine tone played at 100, 250, 400, 550, 700, 850 mVpp, then 1, 1.25, 1.50, 1.75, 2, 2.25Vpp
+
+gainLevels_EdirolNew_20240513.wav
+	gradually increased gain on edirol while little change on the signal analyser
+
+1V	Gain 0 (Min)
+1V	Gain Min+2
+1V	Gain Min+4 (horizontal left)
+1V	Gain Min+6
+1V	Gain Min+8
+1V	Gain Min+10 (vertical)
+1V	Gain Min+12
+750mV	Gain Min+12
+500mV	Gain Min+12
+500mV	Gain Min+14
+250mV	Gain Min+16 (hirizontal right)
+250mV	Gain Min+18
+100mV	Gain Max
+
+    SensEdirolNEW_2023-05-13.wav
+    repeat of previous experiment with correct notes!!
+    
+1V	Gain 0 (Min)
+1V	Gain Min+2
+1V	Gain Min+4 (horizontal left)
+1V	Gain Min+6
+1V	Gain Min+8
+1V	Gain Min+10 (vertical)
+1V	Gain Min+12
+750mV	Gain Min+12
+500mV	Gain Min+12
+500mV	Gain Min+14
+250mV	Gain Min+14
+250mV	Gain Min+16 (hirizontal right)
+100mV	Gain Min+16 (hirizontal right)
+100mV	Gain Min+18
+100mV	Gain Max
+
+

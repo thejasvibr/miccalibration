@@ -1,0 +1,39 @@
+Documentation Calibration microphones 2024 08 05
+Thejasvi and Lena
+
+Installation:
+Thevasvis Laptop -> Henriks pream through jackplug -> JBL big speaker
+About 5m away, directional mic MK66 -> Lena' s Tascam X06
+GRASS 1/4 inch mic -> GRASS power module -> Edirol N225 -> field laptop (audacity)
+
+Files: 
+
+Calib20240508alltogether.wav
+	Recorded from the grass mic Gain +20 dB -> Edirol gain MAX
+	Content 3*(3 sweeps + 5sec noise + 5 tones) + 94 dB SPL @ 1kHz calibrator + IGNORE THE LAST BIT
+
+CalibExpemic.wav
+	Recorded from the MK66 mic -> Tascam recorder gain +34 dB
+	Content 3*(3 sweeps + 5sec noise + 5 tones)
+
+clippingpoint.wav
+	Signal analyser tones through the Edirol gain MIN
+	0.5 sec long tones @ 100, 200, 300, 400, 500, 600, 700, 800mV, 1V, 1.1V, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.5, 3, 3.5, 4, 4.5V
+
+Signalanalyseredirol.wav
+	Signal analyser tones (Amplitude fine) through edirol 
+	1sec long tones
+	Gain MAX	250mV
+	Gain MAX-2	250mV
+	Gain Max-4	250mV (gain horizontal right)
+	Gain Max-6	250mV
+	Gain Max-8	250mV
+	Gain Max-10	250mV (gain vertical)
+	Gain Max-12	250mV
+	Gain Max-12	500mV
+	Gain Max-14	500mV
+	Gain Max-16	500mV (gain horizontal left)
+	Gain Max-18	500mV
+	Gain Min	500mV
+	Gain Min	750mV
+	Gain Min	1V
