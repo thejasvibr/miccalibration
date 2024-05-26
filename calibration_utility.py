@@ -9,12 +9,14 @@ Created on Mon May 13 10:45:34 2024
 import numpy as np 
 import scipy.signal as signal 
 import scipy.ndimage as ndi
+import tqdm 
 
 def rms(X):
     return np.sqrt(np.mean(X**2))
 
 dB = lambda X: 20*np.log10(abs(np.array(X).flatten()))
 
+db_to_linear = lambda X: 10**(X/20)
 
 def segment_sounds(X, smooth_window, threshold):
     '''
@@ -54,7 +56,7 @@ def get_energywindow(X, percentile_thresh):
     
 
 # bin width clarification https://stackoverflow.com/questions/10754549/fft-bin-width-clarification
-def get_rms_from_spectrum(freqs, spectrum, **kwargs):
+def get_rms_from_fft(freqs, spectrum, **kwargs):
     '''Use Parseval's theorem to get the RMS level of each frequency component
     This only works for RFFT spectrums!!!
     
@@ -69,10 +71,52 @@ def get_rms_from_spectrum(freqs, spectrum, **kwargs):
 
 
 def get_freqband_rms(X, fs, **kwargs):
+    '''
+    Get rms within a given min-max frequency range using the fft method.
+    '''
     fft_x = np.fft.rfft(X)
     freqs_x = np.fft.rfftfreq(fft_x.size*2 - 1, 1/fs)
-    rms = get_rms_from_spectrum(freqs_x, fft_x, **kwargs)
-    return rms
+    freqwise_rms = get_rms_from_fft(freqs_x, fft_x, **kwargs)       
+    return freqwise_rms
+
+
+def get_centrefreq_rms(X, fs, **kwargs):
+    '''
+    Given an audio input - get the RMS for each centre frequency from 
+    an rfft.
+    '''
+    fft_x = np.fft.rfft(X)
+    freqs_x = np.fft.rfftfreq(fft_x.size*2 - 1, 1/fs)
+    binwidth = np.diff(freqs_x).max()
+    half_binwidth = binwidth*0.5
+    freqwise_rms_values = np.zeros(freqs_x.size)
+    for i, centre_freq in tqdm.tqdm(enumerate(freqs_x)):
+        kwargs['freq_range'] = (centre_freq-half_binwidth, centre_freq+half_binwidth)   
+        freqwise_rms_values[i] = get_rms_from_fft(freqs_x, fft_x, **kwargs)
+    return freqs_x, freqwise_rms_values
+
+
+
+def get_customband_rms(X, fs, **kwargs):
+    '''
+    Given an audio input - get the RMS for user-defined centre-frequencies
+    and bin-widths
+    
+    TODO:
+        Throw ValueError if the bin widths and audio size don't match
+    
+    '''
+    fft_x = np.fft.rfft(X)
+    freqs_x = np.fft.rfftfreq(fft_x.size*2 - 1, 1/fs)
+    binwidth = np.diff(freqs_x).max()
+    half_binwidth = binwidth*0.5
+    freqwise_rms_values = np.zeros(freqs_x.size)
+    for i, centre_freq in tqdm.tqdm(enumerate(freqs_x)):
+        kwargs['freq_range'] = (centre_freq-half_binwidth, centre_freq+half_binwidth)   
+        freqwise_rms_values[i] = get_rms_from_fft(freqs_x, fft_x, **kwargs)
+    return freqs_x, freqwise_rms_values
+
+
 
 def spllevel_from_audio(rms_or_peak, mic_sensitivity, ref=20e-6):
     '''
