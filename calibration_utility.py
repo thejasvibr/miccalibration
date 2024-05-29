@@ -138,4 +138,10 @@ def spllevel_from_audio(rms_or_peak, mic_sensitivity, ref=20e-6):
     db_spl = dB(soundpressure/ref)
     return db_spl
 
+def pascal_to_dbspl(X):
+    '''
+    Converts Pascals to dB SPL re 20 uPa
+    '''
+    return dB(X/20e-6)
+    
     

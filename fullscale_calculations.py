@@ -21,6 +21,9 @@ def vrms2dbu(vrms_value):
 def vrms2vp2p(vrms_value):
     return 2*np.sqrt(2)*vrms_value
 
+def vrms2vpeak(vrms_value):
+    return np.sqrt(2)*vrms_value
+
 def vpp2rms(vpp_value):
     return vpp_value/(2*np.sqrt(2))
 
