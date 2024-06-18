@@ -1,0 +1,17 @@
+Notes after experiments + discussion of the calibration 
+(2024-06-18, Schloss Ringberg)
+
+* Thejasvi Beleyur, Lena de Framond, Arjan Boonman, Leonie Baier, Susanne Hoffmann, Henrik Brumm
+
+> Why are the sensitivity profiles of microphones so noisy ('bumpy'). 
+	* Does it have to do with the fact that we're using white noise?
+	* Would a calibration that uses a sweep produce different kinds of 
+	sensitivity profiles? 
+	* What is the effect/role of frequency bins here? 
+> Does it make sense to measure a time-averaged spectrum (e.g. like a periodogram)
+> What about utilising multiple playbacks within each session - does that 
+improve the smoothness of the profile? 
+> Look into the +2 dB received level measurements -- where is that coming from? 
+If it is human position related, it must be in dramatic in the last few recordings
+esp. when people got up and moved to one side of the room. 
+

@@ -1,27 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Round 2 microphone calibration 
-==============================
-Lena did another round of recordings on 2024-05-27 with the following changes.
+Tegernsee retreat calibration 
+=============================
 
-* Avisoft Vifa speaker instead of the 2-way speaker used before
-* Microphones recorded individually from the same position (height, distance)
-* GRAS microphone recording of the playbacks at the beginning of the session AND
-at the end of the session 
-* All recordings done on the same recorder (TASCAM Portacapture X-06)
+Speaker model: Avisoft speaker (with ERC 1)
+Microphone models used: 
+    * Sennheiser MKH<> with windshield
+    * Sennheiser ME66 (naked)
+    * Behringer <> (calibration microphone)
 
 
-Thoughts/notes
-~~~~~~~~~~~~~~
-* The Sennheiser ME66 estimated sensitivity microphone seems to be lower by ~4-6 dB -- this is
-  indeed because of the windshield over the microphone!! We estimate a drop of ~4.3 dBrms
-  sound level because of the windshield itself. Without the windshield the mic sensitivity
-  matches that of the company specs. 
-* 
-
-Created on Tue May 28 12:49:27 2024
-
-@author: theja
 """
 
 
@@ -40,16 +28,26 @@ from calibration_utility import *
 from playback_segmenting import give_expected_segments, align_to_outputfile
 import tqdm
 import glob
+#%%
+playback_start_stops_raw = give_expected_segments() # for 44100 Hz sampling rate
+# but now also make sure you have it working for 96 kHz sampling. Thus multiple everything
 
-playback_start_stops = give_expected_segments()
+conversion_factor = 96000/44100
+playback_start_stops = []
+for each in playback_start_stops_raw:
+    start, stop = each
+    playback_start_stops.append((int(start*conversion_factor),
+                                 int(stop*conversion_factor))
+                                )
+    
 
 #%%
 # Find all audio files for the session
-session_folder = os.path.join('multisignal_recordings', '2025-05-27')
+session_folder = os.path.join('multisignal_recordings', '2024-06-24')
 rec_data = pd.read_csv(os.path.join(session_folder,'recording_parameters.csv'))
 by_recname = rec_data.groupby('rec_name')
 
-calibration_recs = by_recname.get_group('calibration_tone_94dBSPL').reset_index(drop=True)
+calibration_recs = by_recname.get_group('1Pa_tone').reset_index(drop=True)
 
 #%% Load the 94 dB SPL rms recording 
 onePa_tone , fs = sf.read(os.path.join(session_folder, calibration_recs.loc[0,'filename']))
@@ -70,19 +68,23 @@ rms_clipPa = clip_rms_value*(ref_Pascals_rms/rms_au_onePa) # rms clip point in P
 peak_clipPa = ref_Pascals_peak/peak_au_onePa # peak clip point in Pascals
 #%% 
 # Align the GRAS mic recording to the digital audio file 
-calib_ind = 1
-calibmic_recs = by_recname.get_group('calib_mic_rec').reset_index(drop=True)
+calib_ind = 0
+calibmic_recs = by_recname.get_group('calib_playback').reset_index(drop=True)
 calibmic_start_t = calibmic_recs.loc[calib_ind,'playback_start']
 calibmic_startind = int(fs*calibmic_start_t)
 gras_stereo, fs = sf.read(os.path.join(session_folder, calibmic_recs.loc[calib_ind,'filename']),
-                          start=int(fs*calibmic_start_t))
+                          start=calibmic_startind)
 gras_audio = gras_stereo[:,0]*db_to_linear(-calibmic_recs.loc[calib_ind,'gain_dB'])
-digital_out, fs = sf.read('multisignal_calibaudio.wav')
+digital_out, fs_pbk = sf.read('multisignal_calibaudio.wav')
+
+# Check if the recording audio is the same as the digital out audio samplerate. 
+upsampled_digitalout = signal.resample(digital_out, int(digital_out.size*(fs/fs_pbk)))
+
 #raise IndexError('Some weird stuff happening with alignment!!')
-timealigned_gras, gras_delpeak = align_to_outputfile(gras_audio, digital_out) 
+timealigned_gras, gras_delpeak = align_to_outputfile(gras_audio, upsampled_digitalout) 
 plt.figure()
 plt.plot(absmax_norm(timealigned_gras[:fs]))
-plt.plot(digital_out)
+plt.plot(upsampled_digitalout)
     #%%
 # Knowing the peak clip pressure in the recording chain.
 # We can now convert the a.u. audio samples of the speaker playbacks
@@ -91,7 +93,7 @@ timeal_gras_pressuresig = timealigned_gras*peak_clipPa
 
 #%% Target microphone audio
 mic_names = list(by_recname.groups.keys())
-target_micname = mic_names[4]
+target_micname = mic_names[1]
 tgt_mic = by_recname.get_group(target_micname).reset_index(drop=True)
 start_ind = int(fs*tgt_mic.loc[:,'playback_start'])
 tgtmic_gain = int(tgt_mic.loc[:,'gain_dB'])
@@ -99,11 +101,11 @@ audiofile_path = os.path.join(session_folder, tgt_mic.loc[:,'filename'].to_list(
 tgtmic_stereo, fs = sf.read(audiofile_path,
                             start=start_ind)
 tgtmic_audio = tgtmic_stereo[:,0]*db_to_linear(-tgtmic_gain)
-timealigned_tgtmic, tgtmic_delpeak = align_to_outputfile(tgtmic_audio, digital_out)
+timealigned_tgtmic, tgtmic_delpeak = align_to_outputfile(tgtmic_audio, upsampled_digitalout)
 
 plt.figure()
 plt.plot(absmax_norm(timealigned_tgtmic))
-plt.plot(digital_out)
+plt.plot(upsampled_digitalout)
 
 #%% Calcluate the sensitivity of the target microphone for one playback chunk
 # Also manually choose a 200 ms silent period to assess SNR. 
@@ -178,19 +180,15 @@ file_ind = 2
 Vrms_clip = dbu2vrms(2)
 senn_vrms_bandwise = Vrms_clip*(tgtmic1_sensitivity_au/clip_rms_value)
 
-if file_ind == 2:
-    expected_sens = 50e-3
-    expected_dBV = dB(expected_sens) # dB (1V/Pa)
-elif file_ind == 3:
-    expected_dBV = -41 
-    expected_sens = db_to_linear(expected_dBV)
+sens = tgt_mic['expected_mvPa']*1e-3 # from mV to V
+
 plt.subplot(312)
 plt.plot(centrefreqs, senn_vrms_bandwise*1e3)
 plt.ylabel('Sensit. mV$_{rms}$/Pa')
 # plt.gca().set_ylim(10, 80)
-plt.hlines([expected_sens*1e3, expected_sens*db_to_linear(-2.5)*1e3,
-            expected_sens*db_to_linear(2.5)*1e3], 0, centrefreqs[-1],
-           label=f'user-manual value {np.around(expected_sens*1e3, 2)} mV/Pa $\pm 2.5$ dB')
+plt.hlines([sens*1e3, sens*db_to_linear(-2.5)*1e3,
+            sens*db_to_linear(2.5)*1e3], 0, centrefreqs[-1],
+           label=f'user-manual value {np.around(sens*1e3, 2)} mV/Pa $\pm 2.5$ dB')
 # plt.hlines(50*db_to_linear(np.array([0,-2.5,2.5])), 0,centrefreqs[-1],
 #            label='Manuf. specs Nominal mV/Pa $\pm 2.5 dB$')
 plt.legend()
@@ -202,19 +200,37 @@ plt.plot(centrefreqs, snr_gras, label='GRAS mic')
 plt.ylabel('Bandwise SNR, dB', fontsize=12)
 plt.xlabel('Band centre-frequencies, Hz', fontsize=12)
 plt.legend()
+#%%
+plt.figure()
+plt.plot(centrefreqs, dB(senn_vrms_bandwise))
+plt.ylabel('sensitivity - dBV/Pa')
+plt.xlabel('Frequency, Hz')
+plt.gca().set_xscale('log')
 
 #%%
 plt.figure()
-plt.title('2024-05-27 audio')
+plt.title('2024-06-24 audio')
 plt.plot(centrefreqs, senn_vrms_bandwise*1e3)
-plt.plot(centrefreqs, senn_vrms_bandwise*1e3*db_to_linear(4.3))
+plt.plot(centrefreqs, senn_vrms_bandwise*1e3*db_to_linear(6))
 plt.ylabel('Target mic sensitivity, mV/Pa'); plt.xlabel('Freq., Hz')
-plt.hlines(expected_sens*1e3, centrefreqs[0], centrefreqs[-1], label='Tech specs expected', linestyles='dashed',)
-plt.hlines([expected_sens*1e3*db_to_linear(2.5), expected_sens*1e3*db_to_linear(-2.5)], centrefreqs[0], centrefreqs[-1],
+plt.hlines(sens*1e3, centrefreqs[0], centrefreqs[-1], label='Tech specs expected', linestyles='dashed',)
+plt.hlines([sens*1e3*db_to_linear(2.5), sens*1e3*db_to_linear(-2.5)], centrefreqs[0], centrefreqs[-1],
            linestyles='dotted', label='Tech. specs $\pm 2.5$ dB'); 
 plt.ylim(10,100);plt.yticks(np.arange(0,100,10))
 plt.legend();plt.grid()
-plt.savefig(f'brummgroup_sennheiser_2024-05-27.png')
+#plt.savefig(f'brummgroup_sennheiser_2024-05-27.png')
+
+plt.figure()
+plt.title('2024-06-24 audio')
+plt.plot(centrefreqs, senn_vrms_bandwise*1e3)
+plt.plot(centrefreqs, senn_vrms_bandwise*1e3*db_to_linear(6))
+plt.gca().set_xscale('log')
+plt.ylabel('Target mic sensitivity, mV/Pa'); plt.xlabel('Freq., Hz')
+plt.hlines(sens*1e3, centrefreqs[0], centrefreqs[-1], label='Tech specs expected', linestyles='dashed',)
+plt.hlines([sens*1e3*db_to_linear(2.5), sens*1e3*db_to_linear(-2.5)], centrefreqs[0], centrefreqs[-1],
+           linestyles='dotted', label='Tech. specs $\pm 2.5$ dB'); 
+plt.ylim(10,100);plt.yticks(np.arange(0,100,10))
+plt.legend();plt.grid()
 
 #%% Having the current frequency response, let's now compensate for it, and calculate the overall 
 # 
@@ -358,8 +374,6 @@ sennheiser_dbspl = dB(np.array(sennheiser_Pa_rms)/20e-6)
 #%%
 # What is the received level calculated when no frequency response compensation is done
 
-
-sens = tgt_mic['expected_mvPa']*1e-3 # from mV to V
 tgtmic_nocomp_dbspl = np.zeros(len(tgtmic1_chunks))
 for i, audio_chunk in enumerate(tgtmic1_chunks):
     if i<len(tgtmic1_chunks)-1:
@@ -387,23 +401,14 @@ plt.figure(figsize=(12,5))
 plt.plot(gras_dbspl, '-*', label='Ref. mic')
 plt.plot(sennheiser_dbspl,'-*', label='Sens. comp. RMS')
 plt.xticks(range(12), sound_labels, rotation=10, fontsize=12)
-plt.plot(sennheiser_comp_dbspl, '-*',label='Filter-based. RMS')
-plt.plot(sennheiser_ifftcomp_dbspl,'-*', label='IFFT-based RMS')
+#plt.plot(sennheiser_comp_dbspl, '-*',label='Filter-based. RMS')
+#plt.plot(sennheiser_ifftcomp_dbspl,'-*', label='IFFT-based RMS')
 plt.plot(tgtmic_nocomp_dbspl, '-*', label='No compensation')
 plt.legend(); plt.yticks(np.arange(10,80,6))
 plt.ylabel('dB SPL, re 20$\mu$Pa rms', fontsize=12)
 plt.grid()
 plt.savefig('received-levels-comparison_.png')
 
-#%%
-sound_ind = 2
-fft_sweep_tgt = abs(np.fft.rfft(tgtmic_ifft_compaudio[sound_ind]))
-fft_sweep_gras = abs(np.fft.rfft(calibmic_chunks[sound_ind][int(fs*0.1):-int(fs*0.1)]))
-
-plt.figure()
-plt.plot(dB(fft_sweep_tgt), label='TGT MIC')
-plt.plot(dB(fft_sweep_gras), label='GRAS')
-plt.legend()
 
 
 

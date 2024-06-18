@@ -60,6 +60,18 @@ def get_rms_from_fft(freqs, spectrum, **kwargs):
     '''Use Parseval's theorem to get the RMS level of each frequency component
     This only works for RFFT spectrums!!!
     
+    Parameters
+    ----------
+    freqs : (Nfreqs,) np.array >0 values
+    spectrum : (Nfreqs,) np.array (complex)
+    freq_range : (2,) array-like
+        Min and max values
+    
+    Returns 
+    -------
+    root_mean_squared : float
+        The RMS of the signal within the min-max frequency range
+   
     '''
     minfreq, maxfreq = kwargs['freq_range']
     relevant_freqs = np.logical_and(freqs>=minfreq, freqs<=maxfreq)
@@ -73,6 +85,16 @@ def get_rms_from_fft(freqs, spectrum, **kwargs):
 def get_freqband_rms(X, fs, **kwargs):
     '''
     Get rms within a given min-max frequency range using the fft method.
+    
+    Parameters
+    ----------
+    X : (Nsamples,) np.array
+    fs : float>0
+        Freq. of sampling in Hz
+    freq_range : (2,) array-like
+        (min, max) frequency to calculate rms from in Hz.
+    
+    
     '''
     fft_x = np.fft.rfft(X)
     freqs_x = np.fft.rfftfreq(fft_x.size*2 - 1, 1/fs)

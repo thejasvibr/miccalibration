@@ -143,7 +143,7 @@ pbk_replicates = [(0,8), (8,16), (16, 23.9)] # (start,stop) in s
 startind, stopind = np.array(pbk_replicates[0])*fs
 tgtmicaudio, fs = sf.read(tgtmic_filepath, start=startind, stop=stopind)
 tgtmicaudio = signal.filtfilt(b,a, tgtmicaudio[:,0])
-tgtmicaudio *= 2 # because it was recorded with Audacity using Windows DirectSound
+#tgtmicaudio *= 2 # because it was recorded with Audacity using Windows DirectSound
 tgtmicgain = 34 # dB gain from the TASCAM 
 tgtmic_gaincomp = -1*tgtmicgain
 
@@ -207,10 +207,11 @@ plt.plot(centrefreqs, bandwise_tgtmic_sens*1e3)
 plt.ylabel('Target mic sensitivity, mV/Pa'); plt.xlabel('Freq., Hz')
 plt.hlines(50, centrefreqs[0], centrefreqs[-1], label='Tech specs expected', linestyles='dashed',)
 plt.hlines([50*db_to_linear(2.5), 50*db_to_linear(-2.5)], centrefreqs[0], centrefreqs[-1],
-           linestyles='dotted', label='Tech. specs $\pm 2.5$ dB'); plt.title(f'Sennheiser ME66 - w sweep {sound_index}')
+           linestyles='dotted', label='Tech. specs $\pm 2.5$ dB');
+plt.title(f'Sennheiser ME66 - 2024-05-08')
 plt.ylim(10,100);plt.yticks(np.arange(0,100,10))
-plt.legend()
-plt.savefig(f'brummgroup_sennheiser_me66_sensitivity_testsound_{sound_index}.png')
+plt.legend();plt.grid()
+plt.savefig(f'brummgroup_sennheiser_2024-05-08.png')
 #%% 
 # Align the two spectra vertically. 
 def spectral_distance(compfactor):
@@ -241,7 +242,7 @@ tones_tgtmic_rms = [ rms(each[silence_samples:-silence_samples])  for each in v_
 
 # Now make a compensation filter and pass it over the target audio 
 desired = np.pad(db_to_linear(freq_compensation_tgtmic),
-                                constant_values=[1,1], 
+                                constant_values=[0,0], 
                                 pad_width=1)
 bands =  np.pad(centrefreqs,
                                 constant_values=[0,fs*0.5], 

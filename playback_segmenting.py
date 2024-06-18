@@ -47,11 +47,13 @@ def align_to_outputfile(mic_audio, digital_out, use_numsamples=44100):
     '''
     cc_mic = signal.correlate(absmax_norm(mic_audio[:use_numsamples]), digital_out[:use_numsamples])
     delaypeak = int(np.argmax(cc_mic) - cc_mic.size*0.5)
+    numsamps = abs(delaypeak)
+    print(delaypeak)
     if delaypeak<0:
-        timealigned_audio = np.concatenate((np.zeros(delaypeak),
+        timealigned_audio = np.concatenate((np.zeros(numsamps),
                                            mic_audio[delaypeak:]))
     elif delaypeak>0:
-        timealigned_audio = np.concatenate((mic_audio[delaypeak:],
-                                           np.zeros(int(delaypeak))))
-    return timealigned_audio
+        timealigned_audio = np.concatenate((mic_audio[numsamps:],
+                                           np.zeros(int(numsamps))))
+    return timealigned_audio, delaypeak
 
