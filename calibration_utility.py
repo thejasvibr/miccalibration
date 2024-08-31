@@ -94,6 +94,11 @@ def get_freqband_rms(X, fs, **kwargs):
     freq_range : (2,) array-like
         (min, max) frequency to calculate rms from in Hz.
     
+    Returns 
+    -------
+    freqwise_rms : np.array 
+        Frequency bin-wise rms values. 
+    
     
     '''
     fft_x = np.fft.rfft(X)
@@ -106,6 +111,21 @@ def get_centrefreq_rms(X, fs, **kwargs):
     '''
     Given an audio input - get the RMS for each centre frequency from 
     an rfft.
+    
+    Parameters
+    ----------
+    X : np.array
+        Audio clip
+    fs : float>0
+        Sampling rate in Hz
+    
+    Returns 
+    -------
+    freqs_x : np.array 
+        Band centre-frequencies
+    freqwise_rms_values : np.array 
+        RMS values for each frequency-band
+    
     '''
     fft_x = np.fft.rfft(X)
     freqs_x = np.fft.rfftfreq(fft_x.size*2 - 1, 1/fs)
