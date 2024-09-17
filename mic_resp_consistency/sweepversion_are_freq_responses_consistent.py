@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Are the microphone frequency responses consistent across sessions?
-==================================================================
+Are the microphone frequency responses consistent across sessions -SWEEP VERSION
+================================================================================
 Let's choose two sessions where we know the Sennheiser ME66 was recorded without
 the windshield: 2024-08-19 and 2024-06-24.
 
+The predecessor of this module is 'are_freq_responses_consistent.py'. The idea here
+is to test if changing the analysed signal affects the microphone sensitivity calculated. 
+
 Observations
-------------
-* Just the 1 Pa calibration tone itself can have 0.5 dBrms measurement variation across sessions
-* When recorded w a GRAS mic, the white noise has a constant-ish dB rms at the start and beginning. 
-  What seems to vary by 1-1.5 dB is the frequency-bin-wise dB rms ...?? How/why?
-
-Notes/corrections in raw data
-----------------------------------
-* The audio_rec_data.csv - has one corrected gain value. The gain for '2024-06-24\240618_0318.wav' is
-originally noted as 66 dB. This is inconsistent with other recordings, and has been corrected to 46 dB.
-
-* The two sessions have different sampling rates. This is important to consider.
+~~~~~~~~~~~~
 
 Created on Fri Aug 30 22:46:07 2024
 
@@ -63,6 +56,9 @@ grasrms_1Pa_avg = np.mean(gras_rms_1Pa) # sensitivity in a.u. rms/Pa
 
 #%% Generate the SPL vs frequency profile from the calibration microphone
 gras_pbkrec_all = rec_by_mic.get_group(('GRAS1/4', 'playback_rec'))
+# keep all those with valid linear sweep recordings
+gras_pbkrec_all = gras_pbkrec_all.dropna(subset='sweepset_start')
+
 
 freqbin_separation = 200
 freq_bins = np.arange(200, 19000+freqbin_separation, freqbin_separation)
@@ -84,17 +80,18 @@ for ind, row in gras_pbkrec_all.iterrows():
     #Make the hilbert envelope, and cross-correlate with the hilbert envelope of the 
     # synthetic noise signal
     
-    chunks, envelope = segment_sounds_v2(audio_gaincomp, int(fs*5e-3), 25)
+    chunks, envelope = segment_sounds_v2(audio_gaincomp, int(fs*0.25e-3), 25)
     #plt.plot([each[0].stop-each[0].start for each in chunks])
     
-    long_snips = []
+    short_snips = []
     for each in chunks:
         chunk = each[0]
-        if (chunk.stop - chunk.start) >= int(fs*4):
+        durn = (chunk.stop - chunk.start)/fs
+        if np.logical_and(durn>2.5e-3, durn<3e-3):
             print('yes')
-            long_snips.append(audio_gaincomp[chunk.start:chunk.stop])
+            short_snips.append(audio_gaincomp[chunk.start:chunk.stop])
 
-    for each in long_snips:
+    for each in short_snips:
         print(dB(rms(each)))
     
     for i, each in enumerate(long_snips):
@@ -112,6 +109,19 @@ for ind, row in gras_pbkrec_all.iterrows():
 all_spl_vs_freq = pd.concat(all_spl_vs_freq)
 all_spl_vs_freq['pa_rms'] = all_spl_vs_freq['au_rms']/grasrms_1Pa_avg
 all_spl_vs_freq['dBspl'] = dB(all_spl_vs_freq['pa_rms']/20e-6)
+#%%
+firstplot_num = 311
+x_t = np.linspace(0, envelope.size/fs, envelope.size)
+plt.figure()
+a0 = plt.subplot(firstplot_num)
+plt.plot(x_t, envelope)
+plt.hlines(np.percentile(envelope, 30), 0, x_t.max())
+plt.subplot(firstplot_num+1, sharex=a0)
+plt.plot(x_t, audio_gaincomp)
+plt.subplot(firstplot_num+2, sharex=a0)
+plt.specgram(audio_gaincomp, Fs=fs)
+
+
 #%%
 plt.figure()
 for key, subdf in all_spl_vs_freq.groupby(['session', 'filename']):
