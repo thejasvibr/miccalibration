@@ -63,14 +63,15 @@ grasrms_1Pa_avg = np.mean(gras_rms_1Pa) # sensitivity in a.u. rms/Pa
 digital_pbk, fs = sf.read('..\multisignal_calibaudio.wav')
 short_sweep = digital_pbk[int(fs*0.1):int(fs*(0.1+3e-3))]
 
+resampling_factor = 96000/44100
+short_sweep_highfs = signal.resample(short_sweep,
+                                     int(short_sweep.size*resampling_factor))
+
 #%% Generate the SPL vs frequency profile from the calibration microphone
 gras_pbkrec_all = rec_by_mic.get_group(('GRAS1/4', 'playback_rec'))
 # keep all those with valid linear sweep recordings
 gras_pbkrec_all = gras_pbkrec_all.dropna(subset='sweepset_start')
 
-# potential ideas are to have the sweep-start entry in the csv file as a tuple
-# with all the start times of the short sweeps
-raise ValueError('ONly doing this for one replikcate now')
 #%%
 all_spl_vs_freq = []
 
@@ -80,21 +81,27 @@ for ind, row in gras_pbkrec_all.iterrows():
     final_path = os.path.join('..', 'multisignal_recordings', row['session'], 
                               row['pure_filename'])
     audio, fs  = sf.read(final_path)
-    
-    if fs != 44100:
-        raise ValueError('Wrong sampling rate')
-    
+
     if np.isnan(row['sweepset_start']):
         raise ValueError('this row should not be here...')
     else:
         audio_rec = audio[int(fs*row['sweepset_start']):,0]
     audio_gaincomp = audio_rec*10**(-row['gain_dB']/20)
+    b,a = signal.butter(1, 100/(fs*0.5), 'high')
+    audio_gaincomp = signal.filtfilt(b,a, audio_gaincomp)
     inds, segments = extract_out_signalparts(audio_gaincomp, fs)
     for i, segment in enumerate(segments[:1]):
-        cc = signal.correlate(segment, short_sweep, 'same')
+        if fs == 96000:
+            template = short_sweep_highfs
+        elif fs==44100:
+            template = short_sweep
+        else:
+            raise ValueError(f'{fs} is an unknown sampling rate')
+            
+        cc = signal.correlate(segment, template, 'same')
         index = np.argmax(cc)
-        signal_start = int(index-short_sweep.size*0.5)
-        signal_stop = signal_start + short_sweep.size
+        signal_start = int(index-template.size*0.5)
+        signal_stop = signal_start + template.size
         rec_signal = segment[signal_start:signal_stop]
         
         freqbins, freq_rms = calc_native_freqwise_rms(rec_signal, fs)
@@ -121,8 +128,8 @@ for key, subdf in all_spl_vs_freq.groupby(['session', 'filename']):
 plt.legend()
 plt.grid();plt.ylabel('dB SPL$_{rms}$, re 20$\mu$Pa', fontsize=12)
 plt.xlabel(f'Frequency, Hz {(freqbins[0])} to {freqbins[-1]}', fontsize=12)
-plt.title('silence + sweep')
-plt.ylim(10, 75)
+plt.title('only sweep')
+plt.ylim(-30, 75)
 #%% Load the target microphone recordings 
 tgt_mic_recs = rec_by_mic.get_group(('SENNHEISER-ME66-ONLY', 'playback_rec'))
 
@@ -134,37 +141,46 @@ for ind, row in tgt_mic_recs.iterrows():
                               row['pure_filename'])
     audio, fs  = sf.read(final_path)
     
-    if np.isnan(row['pbk_start']):
-        audio_rec = audio[:,0]
+    if np.isnan(row['sweepset_start']):
+        continue  
     else:
-        audio_rec = audio[int(fs*row['pbk_start']):int(fs*row['pbk_stop']),0]
+        audio_rec = audio[int(fs*row['sweepset_start']):,0]
+        
+   
+    
+    
     audio_gaincomp = audio_rec*10**(-row['gain_dB']/20)
-    
-    chunks, envelope = segment_sounds_v2(audio_gaincomp, int(fs*5e-3), 25)
-    
-    long_snips = []
-    for each in chunks:
-        chunk = each[0]
-        if (chunk.stop - chunk.start) >= int(fs*4):
-            print('yes')
-            long_snips.append(audio_gaincomp[chunk.start:chunk.stop])
-
-    for each in long_snips:
-        print(dB(rms(each)))
-    
-    for i, each in enumerate(long_snips):
+    inds, segments = extract_out_signalparts(audio_gaincomp, fs)
+    for i, segment in enumerate(segments[:1]):
+        if fs == 96000:
+            template = short_sweep_highfs
+        elif fs==44100:
+            template = short_sweep
+        else:
+            raise ValueError(f'{fs} is an unknown sampling rate')
+            
+        cc = signal.correlate(segment, template, 'same')
+        index = np.argmax(cc)
+        signal_start = int(index-template.size*0.5)
+        signal_stop = signal_start + template.size
+        rec_signal = segment[signal_start:signal_stop]
+        
+        freqbins, freq_rms = calc_native_freqwise_rms(rec_signal, fs)
+        
+        clips.append(rec_signal)
         rms_vs_freq = pd.DataFrame(data=None,
                                    columns=['session', 'filename', 'freq_bin', 'au_rms'], 
-                                   index=range(freq_bins.size))
-        freqbins_rms = calculate_rms_for_freqbins(each, fs, freq_bins)
-        rms_vs_freq['freq_bin'] = freq_bins
-        rms_vs_freq['au_rms'] = freqbins_rms
+                                   index=range(freqbins.size))
+        rms_vs_freq['freq_bin'] = freqbins
+        rms_vs_freq['au_rms'] = freq_rms
         rms_vs_freq['session'] = row['session']
         rms_vs_freq['filename'] = row['pure_filename']
         rms_vs_freq['replicate_num'] = i
         all_rms_vs_freq.append(rms_vs_freq)
 
 all_rms_vs_freq = pd.concat(all_rms_vs_freq)
+all_rms_vs_freq['pa_rms'] = all_rms_vs_freq['au_rms']/grasrms_1Pa_avg
+all_rms_vs_freq['dBspl'] = dB(all_rms_vs_freq['pa_rms']/20e-6)
 #%%
 # Does the speaker also continue to show the same kind of playback variation? 
 
@@ -174,7 +190,7 @@ for key, subdf in all_rms_vs_freq.groupby(['session', 'filename']):
     plt.plot(subdf_so['freq_bin'], dB(subdf_so['au_rms']),'-*', label=key[0]+' '+key[1][-9:-4])
 plt.legend()
 plt.grid();plt.ylabel('dB a.u. rms, re 1', fontsize=12)
-plt.xlabel(f'Frequency, Hz {(freq_bins[0])} to {freq_bins[-1]}', fontsize=12)
+plt.xlabel(f'Frequency, Hz {(freqbins[0])} to {freqbins[-1]}', fontsize=12)
 #plt.title('Consistent noise spectra within a playback. \n Sometimes inconsistent noise spectra across playbacks')
 
 
@@ -219,12 +235,25 @@ plt.figure()
 for group, subdf in all_tgtmic_sens.groupby(['session', 'calibmic_filename', 'tgtmic_filename']):
     print(group)
     plt.plot(subdf['freq_bin'], dB(subdf['au_rms_perPa']), label=group)
-plt.legend()
+
 ylims = np.around(dB(np.percentile(all_tgtmic_sens['au_rms_perPa'], [0,100])))
 plt.ylim(ylims[0]-3, ylims[1]+3)
 plt.yticks(np.arange(ylims[0], ylims[1]+4, 2));
 plt.grid();plt.ylabel('Sensitivity, dB( $\\frac{au_{rms}}{Pa}$) re 1', fontsize=12);plt.xlabel('Frequency, Hz', fontsize=12)
-
+plt.vlines([2.5e3, 12.5e3], -44,-10, color='k', label='-20 dB limits')
+plt.legend()
 plt.gca().get_legend().set_title("Date , Calibration mic recording, Target mic recording")
-plt.title('Sennheiser ME 66 shows mostly consistent sensitivity..?')
-plt.savefig(f'sennheiserme66_{freqbin_separation}_Hz_separation.png')
+plt.title('Sennheiser ME 66 shows consistent sensitivity for 3ms sweeps')
+plt.xlim(0, 19.2e3)
+plt.savefig(f'sennheiserme66_sweeps_Hz_separation.png')
+
+
+#%%
+# Get the 
+rfft_digitalsweep = np.fft.rfft(short_sweep)
+freqs_digitalsweep = np.fft.rfftfreq(short_sweep.size, 1/fs)
+dB_powerspec = dB(abs(rfft_digitalsweep))
+
+plt.figure()
+plt.plot(freqs_digitalsweep, dB_powerspec)
+plt.hlines(np.max(dB_powerspec)-12, 0, freqs_digitalsweep.max())
