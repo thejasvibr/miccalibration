@@ -82,6 +82,36 @@ def get_rms_from_fft(freqs, spectrum, **kwargs):
     return root_mean_squared
 
 
+def calc_native_freqwise_rms(X, fs):
+    '''
+    Converts the FFT spectrum into a band-wise rms output. 
+    The frequency-resolution of the spectrum/audio size decides
+    the frequency resolution in general. 
+    
+    Parameters
+    ----------
+    X : np.array
+        Audio
+    fs : int
+        Sampling rate in Hz
+    
+    Returns 
+    -------
+    fftfreqs, freqwise_rms : np.array
+        fftfreqs holds the frequency bins from the RFFT
+        freqwise_rms is the RMS value of each frequency bin. 
+    '''
+    rfft = np.fft.rfft(X)
+    fftfreqs = np.fft.rfftfreq(X.size, 1/fs)
+    # now calculate the rms per frequency-band
+    freqwise_rms = []
+    for each in rfft:
+        mean_sq_freq = np.sum(abs(each)**2)/rfft.size
+        rms_freq = np.sqrt(mean_sq_freq/(2*rfft.size-1))
+        freqwise_rms.append(rms_freq)
+    return fftfreqs, freqwise_rms
+
+
 def get_freqband_rms(X, fs, **kwargs):
     '''
     Get rms within a given min-max frequency range using the fft method.
