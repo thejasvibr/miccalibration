@@ -2,6 +2,12 @@
 """
 Created on Fri Sep 13 15:35:22 2024
 
+Inputs 
+------
+* Sweep snippets from main audio file (target and gras microphone)
+* GRAS 1 Pa tone sensitivity in dB rms (gain compensated)
+* Start/end freqs & duration of the sweep
+* Find the peak in the cross-correlation (post-convolution) - this can be automated with a peak-finder alg.
 @author: Lena
 """
 
@@ -148,25 +154,19 @@ GrasRec_file = wav_folder / "Sweep_3_gras.wav"
 # PB, fs_i = sf.read(InitPb_file)
 
 # Start Frequency (kHz)
-SF = 10
 SF = 15
 # End Frequency (kHz)
-EF = 94
 EF = 1
 # Duration (sec)
-D = 0.6
-D = 0.0065
+D = 0.007
 
 ## calculate sweep rate
 Sweeprate = (EF-SF)*1000/D
 
 
 ## gras mic data
+Sens_gras = -17.27-36 # dB RMS a.u. of the 1 Pa tone. 
 
-Sens_gras = -60.28
-Sens_gras = -17.27-36
-
-Gain = 40
 Gain = 20+36
 
 #%%
@@ -228,7 +228,7 @@ for tag in tagsweeps_files:
     ## Kristian's magic 
     SweepXC, modu = Sweeptovertical(Sweep, Sweeprate=Sweeprate, fs=fs_s)
     
-
+    # Cross-correlation peak finding part 
     mx = np.where(SweepXC == np.max(SweepXC))[0][0]
     
     detect = [(mx/fs_s)-0.001, (mx/fs_s)+0.001]
@@ -241,7 +241,7 @@ for tag in tagsweeps_files:
     plt.plot(t, CleanXC)
     
     
-    ## back transform to sweep
+    ## back transform to sweep - recover the echo-cancelled playback
     Clean_Sweep = Cleansweep(CleanXC, modu)
 
     ## spectrum

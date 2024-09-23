@@ -55,5 +55,28 @@ While discussing, we realised that the 3 ms sweeps provide a nice example to che
 ### Longer term steps:
 * Implement the 'echo-cancellation' workflow that Kristian Beedlholm uses. This reminds TB of the workflows in the swept-sine room impulse-response experiments. 
 
+## Summary 2024-09-19
+
+### Short sweeps result in consistent mic sensitivities
+Using only the 3 ms sweeps, TB could recover very consistent mic sensitivities, even across days. This means, sweeps are truly the way to go, and the shorter the better. 
+
+![](mic_resp_consistency/sennheiserme66_sweeps_Hz_separation.png)
+
+*Figure 3: Consistent mic sensitivities using 3 ms sweeps with no echoes. Even when two different GRAS mic recordings are used as reference - the variation is minimal, and at most 3 dB in the worst case. All the sensitivity profiles are within 2 dB of each other.*
+
+
+## Summary 2024-09-23
+
+### Microphone sensitivities match -- but almost? 
+Lena seems to report a ~ 3 dB shift in sensitivity in comparison to what I have.
+	* One possible reason is how she may have moved from GRAS 1Pa dB rms re 1 or re clip rms. This  affect how the waveform is converted to the Pa units.
+	* Also -- maybe she's using Sennheiser ME66 *with* windshield, while I'm using *without* to compare it all to the company specs. 
+Lena also reports variation in 7 ms spectra within a recording of up to ~ 2 dB uniformly across all frequency bands -- weird.
+
+TODO:
+	* Check to see if you recover the ~50mV/Pa for the Sennheiser ME66 without windshield. 
+	* Lena redoes audio analysis for ME66 without windshield (she's done it all so far with the windshield)
+	* Manual check of the 7 ms sweeps - are there are actually differences in received level in the audio?
+
 	
 Authors/contributors : Thejasvi Beleyur, Lena de Framond

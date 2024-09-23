@@ -14,7 +14,6 @@ Observations
 
 
 
-
 Created on Fri Aug 30 22:46:07 2024
 
 @author: thejasvi
@@ -29,6 +28,7 @@ sys.path.append('../')
 from calibration_utility import *
 from playback_segmenting import give_expected_segments, align_to_outputfile
 from freqresp_utils import extract_out_signalparts
+
 #%% Load the calibration mic audio recordings 
 rec_data = pd.read_csv('sweeps_audio_rec_data.csv')
 rec_data['session'] = rec_data['filename'].apply(lambda X: os.path.split(X)[0])
@@ -247,6 +247,33 @@ plt.title('Sennheiser ME 66 shows consistent sensitivity for 3ms sweeps')
 plt.xlim(0, 19.2e3)
 plt.savefig(f'sennheiserme66_sweeps_Hz_separation.png')
 
+plt.figure()
+for group, subdf in all_tgtmic_sens.groupby(['session', 'calibmic_filename', 'tgtmic_filename']):
+    print(group)
+    plt.plot(subdf['freq_bin'], dB(subdf['au_rms_perPa']), label=group)
+
+ylims = np.around(dB(np.percentile(all_tgtmic_sens['au_rms_perPa'], [0,100])))
+plt.gca().set_xscale('log')
+plt.ylim(ylims[0]-3, ylims[1]+3)
+plt.yticks(np.arange(ylims[0], ylims[1]+4, 2));
+plt.grid();plt.ylabel('Sensitivity, dB( $\\frac{au_{rms}}{Pa}$) re 1', fontsize=12);plt.xlabel('Frequency, Hz', fontsize=12)
+plt.vlines([2.5e3, 12.5e3], -44,-10, color='k', label='-20 dB limits')
+plt.legend()
+plt.gca().get_legend().set_title("Date , Calibration mic recording, Target mic recording")
+plt.title('Sennheiser ME 66 shows consistent sensitivity for 3ms sweeps')
+plt.xlim(0, 19.2e3)
+
+#%%
+# Are we in the correct range, in dBV/Pa 
+tascam_clip_vrms =  0.975 # Vrms clip
+# convert aurms re 1 to aurms re Clip (1/sqrt(2))
+clip_rms = 1/np.sqrt(2)
+# Sennheiser ME 66 - specs link: https://assets.sennheiser.com/global-downloads/file/11897/SpecSheet_ME_66_EN.pdf
+raise NotImplementedError(('Not yet complete -- see if you can recover 50 mVrms/Pa overall'))
+
+for group, subdf in all_tgtmic_sens.groupby(['session', 'calibmic_filename', 'tgtmic_filename']):
+    subdf['au_rms_reclip'] = subdf['au_rms_perPa']/clip_rms
+    plt.plot(subdf['freq_bin'], dB(subdf['au_rms_perPa']), label=group)
 
 #%%
 # Get the 
