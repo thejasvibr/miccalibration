@@ -269,12 +269,24 @@ tascam_clip_vrms =  0.975 # Vrms clip
 # convert aurms re 1 to aurms re Clip (1/sqrt(2))
 clip_rms = 1/np.sqrt(2)
 # Sennheiser ME 66 - specs link: https://assets.sennheiser.com/global-downloads/file/11897/SpecSheet_ME_66_EN.pdf
-raise NotImplementedError(('Not yet complete -- see if you can recover 50 mVrms/Pa overall'))
+me66_sens_dBV = dB(50e-3) # 50 mV/Pa +/- 2.5 dB
+me66_sens_dBV_minmax = [me66_sens_dBV-2.5, me66_sens_dBV+2.5]
+#raise NotImplementedError(('Not yet complete -- see if you can recover 50 mVrms/Pa overall'))
 
 for group, subdf in all_tgtmic_sens.groupby(['session', 'calibmic_filename', 'tgtmic_filename']):
-    subdf['au_rms_reclip'] = subdf['au_rms_perPa']/clip_rms
-    plt.plot(subdf['freq_bin'], dB(subdf['au_rms_perPa']), label=group)
-
+    subdf['aurms_reclip_perPa'] = subdf['au_rms_perPa']/clip_rms
+    subdf['vrms_perPa'] = subdf['aurms_reclip_perPa']*tascam_clip_vrms
+    plt.plot(subdf['freq_bin'], dB(subdf['vrms_perPa']), label=group)
+plt.gca().set_xscale('log')
+plt.hlines([me66_sens_dBV, *me66_sens_dBV_minmax], subdf['freq_bin'].min(), subdf['freq_bin'].max(), 'k', 
+           label='Sensitivity as per spec-sheet $\pm$ 2.5 dB')
+plt.xlim(2.5e3, 13e3);
+plt.ylim(-40, -15);plt.ylabel('Sensitivity, dBV/Pa', fontsize=12)
+plt.title('Bare Sennheiser ME66 sensitivity in dBV/Pa')
+plt.xlabel('Frequency, Hz', fontsize=12);plt.legend()
+plt.xticks([2.5e3, *np.arange(3,14, 2)*1e3])
+plt.yticks(np.arange(-40, -14, 2));plt.grid()
+plt.savefig('bare_sennheiser-me66_dBV_perPa.png')
 #%%
 # Get the 
 rfft_digitalsweep = np.fft.rfft(short_sweep)

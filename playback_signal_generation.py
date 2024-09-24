@@ -11,19 +11,7 @@ import matplotlib.pyplot as plt
 import sounddevice as sd
 import soundfile as sf
 
-#%%
-
-def powerspec(X, **kwargs):
-    fft_X = np.fft.rfft(X)
-    fft_freqs = np.fft.rfftfreq(X.size, d=1/kwargs['fs'])
-    return fft_freqs, 20*np.log10(abs(fft_X))
-
-def maxnorm_powerspec(X, **kwargs):
-    fftfreqs, spectrum = powerspec(X, **kwargs)
-    spectrum -= np.max(spectrum)
-    return fftfreqs, spectrum
-def rms(X):
-    return np.sqrt(np.mean(X**2))
+from utility_Kristian_MicFresp import * 
 #%%
 # make a sweep
 durns = np.array([3, 5, 7] )*1e-3
@@ -47,7 +35,6 @@ for durn in durns:
     
     plt.subplot(212)
     plt.plot(sweep_padded)
-    
 
 sweeps_combined = np.concatenate(all_sweeps)
 sf.write('playback_sweeps.wav', sweeps_combined, samplerate=fs)

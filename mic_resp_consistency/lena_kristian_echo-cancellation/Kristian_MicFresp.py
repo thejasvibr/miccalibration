@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+Lena's Python module with Thejasvi's modifications on the go. 
+=============================================================
 Created on Fri Sep 13 15:35:22 2024
 
 Inputs 
@@ -8,6 +10,13 @@ Inputs
 * GRAS 1 Pa tone sensitivity in dB rms (gain compensated)
 * Start/end freqs & duration of the sweep
 * Find the peak in the cross-correlation (post-convolution) - this can be automated with a peak-finder alg.
+
+
+Changes made
+------------
+* Changes GRAS sweep files to keep naming convention consistent
+
+
 @author: Lena
 """
 
@@ -19,150 +28,38 @@ from scipy import signal
 from scipy import fft
 from pathlib import WindowsPath
 import os
+import glob
 
 plt.close("all")
-
-# import basicfunctions as bf
-
-def DC_remove(audio):
-    audio2 = audio-np.mean(audio)
-    return audio2
-
-def normalize_energy(audio):
-    norm = audio/np.sqrt(np.sum(audio**2))
-    return norm
-
-def Sweeptovertical (audio, Sweeprate, fs, plot = True):
-    swp=DC_remove(audio)
-    L=len(swp)
-    G=fft.fft(swp)
-    f = np.arange(0, L, 1)/L*fs
-    t = f*L/fs**2
-    gdl=f/Sweeprate
-
-    modu=np.exp(1j*np.cumsum(gdl)*2*np.pi/L*fs)
-    modu[int(len(modu)/2):-1]=0
-    modu[-1]=0
-
-    modsig=np.real(fft.ifft(G*modu))*2
-
-    if plot: 
-        fig, ax = plt.subplots(3, 1)
-        ax[0].specgram(swp, Fs=fs, NFFT=64, noverlap = 32)
-        ax[1].specgram(modsig, Fs= fs, NFFT=64, noverlap = 32)
-        ax[2].plot(t, modsig)
-        plt.draw()
-        
-    return modsig, modu
-
-def Cleansweep (modsig, modu):
-
-    G2 = fft.fft(modsig)
-    modsig2=np.real(fft.ifft(G2*np.flip(modu)))*2
-
-    return modsig2
-
-
-def Energy (audio):
-    return np.sum(audio**2)
-
-def RMS(x):
-    # calculate root mean square
-    rms = np.sqrt(np.mean(x*x))
-    return(rms)
-
-def dB(x, ref=None):
-    if ref==None:
-        ref= 1
-    dBx = 20*np.log10(x/ref)
-    return dBx
-
-def undB(x, ref=None):
-    if ref==None:
-        ref= 1
-    dBx = ref * 10**(x/20)
-    return dBx
-
-def DiffSpecs (spec_Gras_dB, f_g, spec_Sweep_dB, f_s):
-    if f_s[-1]<f_g[-1]: 
-        spec_Gras_dB = spec_Gras_dB[f_g<f_s[-1]]        
-        f=f_s
-    elif f_g[-1]<f_s[-1]: 
-        spec_Sweep_dB = spec_Sweep_dB[f_s<f_g[-1]]
-        f=f_g
-    else:
-        f = f_g
-    
-    f=resample_by_interpolation(f ,n_out=513)
-    spec_Gras_dB = resample_by_interpolation(spec_Gras_dB ,n_out=513)
-    spec_Sweep_dB = resample_by_interpolation(spec_Sweep_dB ,n_out=513)
-
-    DiffSpec = [Sweep - Gras for Sweep, Gras in zip (spec_Sweep_dB, spec_Gras_dB)]
-    return f, DiffSpec
-
-
-def resample_by_interpolation(signal, input_fs=None, output_fs=None, n_out=None):
-    # DISCLAIMER: This function is copied from https://github.com/nwhitehead/swmixer/blob/master/swmixer.py, 
-    #             which was released under LGPL. 
-    
-    if n_out is None:
-        scale = output_fs / input_fs
-        # calculate new length of sample
-        n = round(len(signal) * scale)
-    elif input_fs is None:
-        n=n_out
-
-    # use linear interpolation
-    # endpoint keyword means than linspace doesn't go all the way to 1.0
-    # If it did, there are some off-by-one errors
-    # e.g. scale=2.0, [1,2,3] should go to [1,1.5,2,2.5,3,3]
-    # but with endpoint=True, we get [1,1.4,1.8,2.2,2.6,3]
-    # Both are OK, but since resampling will often involve
-    # exact ratios (i.e. for 44100 to 22050 or vice versa)
-    # using endpoint=False gets less noise in the resampled sound
-    resampled_signal = np.interp(
-        np.linspace(0.0, 1.0, n, endpoint=True),  # where to interpret
-        np.linspace(0.0, 1.0, len(signal), endpoint=True),  # known positions
-        signal,  # known data points
-    )
-    return resampled_signal
+from utility_Kristian_MicFresp import * 
     
 
 #%%
-   
-# wav_folder = WindowsPath("D://Lena//panama//TagFresp")
-wav_folder = WindowsPath("D://Lena//0HBrumm//Mic_calib//2024-08-19//sweeps")
 
-wav_files = [p.stem for p in wav_folder.iterdir() if p.is_file() and p.suffix == ".wav"]
+wav_folder = "sweeps/"
 
-# tagsweeps_files = [t for t in wav_files if "Sweep" in t]
-tagsweeps_files = [t for t in wav_files if "Sweep3" in t]
+wav_files = glob.glob(os.path.join(wav_folder, '*.wav'))
+
+sweep_type = 'Sweep3' # other options are Sweep1, Sweep2, Sweep3
+tagsweeps_files = [t for t in wav_files if sweep_type in t]
 print(tagsweeps_files)
 
-
-# GrasRec_file = wav_folder / "mic4_t40dB_40cm_kl14_lodretposition_5VADPeak_14.wav"
-GrasRec_file = wav_folder / "Sweep_3_gras.wav"
-
-# InitPb_file = wav_folder / "sweepkorr.wav"
+# choose the corresponding GRAS mic sweep
+GrasRec_file = [each for each in tagsweeps_files if 'gras' in each][0]
 
 
 #%%
 
 # make the magic xc template
+sweep_durations = {'Sweep3': 7e-3, 'Sweep2': 5e-3, 'Sweep1': 3e-3} # seconds
 
-## fill in by hand the calibration sweep
-# PB, fs_i = sf.read(InitPb_file)
+D = sweep_durations[sweep_type]
 
-# Start Frequency (kHz)
-SF = 15
-# End Frequency (kHz)
-EF = 1
-# Duration (sec)
-D = 0.007
+# Start & end frequencies
+SF, EF = 15e3, 0.2e3 # Hz
 
 ## calculate sweep rate
-Sweeprate = (EF-SF)*1000/D
-
+Sweeprate = (EF-SF)/D
 
 ## gras mic data
 Sens_gras = -17.27-36 # dB RMS a.u. of the 1 Pa tone. 
@@ -221,7 +118,7 @@ Frequency_response = pd.DataFrame()
 for tag in tagsweeps_files:
     
     # read and remove DC offset
-    sweeppath = wav_folder / f"{tag}.wav"
+    sweeppath = tag
     Sweep, fs_s = sf.read(sweeppath)
     Sweep = DC_remove(Sweep)
 
@@ -302,12 +199,11 @@ for tag in tagsweeps_files:
 
     
 
-FrespPath = wav_folder / f"Fresp_{pd.to_datetime('today').strftime('%Y-%m-%d')}.csv"
+FrespPath = os.path.join(wav_folder, f"Fresp_{pd.to_datetime('today').strftime('%Y-%m-%d')}.csv")
 Frequency_response.to_csv(FrespPath, index=False)
 
-SensPath = wav_folder / f"Sens_{pd.to_datetime('today').strftime('%Y-%m-%d')}.csv"
+SensPath = os.path.join(wav_folder, f"Sens_{pd.to_datetime('today').strftime('%Y-%m-%d')}.csv")
 (pd.DataFrame.from_dict(data=Sensitivity, orient='index').to_csv(SensPath, header=["Sensitivity_dB_re_1UAPa"]))
-
 #%%
-
+plt.plot(Frequency_response['Frequency_Hz'])
 
