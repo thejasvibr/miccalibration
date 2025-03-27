@@ -288,11 +288,6 @@ plt.xticks([2.5e3, *np.arange(3,14, 2)*1e3])
 plt.yticks(np.arange(-40, -14, 2));plt.grid()
 plt.savefig('bare_sennheiser-me66_dBV_perPa.png')
 #%%
-# Get the 
-rfft_digitalsweep = np.fft.rfft(short_sweep)
-freqs_digitalsweep = np.fft.rfftfreq(short_sweep.size, 1/fs)
-dB_powerspec = dB(abs(rfft_digitalsweep))
+# Now compare the received levels of a 'validation' sound - this could be for e.g. 
+# the 7 ms sweep. 
 
-plt.figure()
-plt.plot(freqs_digitalsweep, dB_powerspec)
-plt.hlines(np.max(dB_powerspec)-12, 0, freqs_digitalsweep.max())

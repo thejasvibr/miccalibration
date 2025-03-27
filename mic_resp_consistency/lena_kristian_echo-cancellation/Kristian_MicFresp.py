@@ -91,6 +91,16 @@ CleanXC[int(detect[1]*fs_g):-1]=0
 ## back transform to sweep
 Clean_gras = Cleansweep(CleanXC, modu)
 
+#%%
+fftsize = 64
+overlap = fftsize - 1 
+plt.figure();
+plt.subplot(211);plt.specgram(Gras, Fs=fs_g,NFFT=fftsize, noverlap=overlap);
+plt.xticks([]);plt.ylabel('Frequency, Hz');plt.title('Raw microphone audio')
+plt.subplot(212);plt.specgram(Clean_gras, Fs=fs_g, NFFT=fftsize, noverlap=overlap)
+plt.title('Processed - only template & direct path')
+plt.xlabel('Time, s')
+#%%
 ## spectrum
 fr_g,spec_Gras = signal.periodogram(Gras, fs=fs_g)
 fr_g,spec_CleanGras = signal.periodogram(Clean_gras, fs=fs_g)
@@ -107,7 +117,6 @@ Ei = np.sum(Gras**2)
 
 RMS_Gras = RMS(Clean_gras)
 RMS_Orig = dB(RMS_Gras) + 94 - Sens_gras - Gain
- 
 #%%
 
 # process tag mics

@@ -22,7 +22,7 @@ def Sweeptovertical (audio, Sweeprate, fs, plot = True):
     swp=DC_remove(audio)
     L=len(swp)
     G=fft.fft(swp)
-    f = np.arange(0, L, 1)/L*fs
+    f = np.arange(0, L, 1)/L*fs # frequencies of the FFT from 0-fs
     t = f*L/fs**2
     gdl=f/Sweeprate
 
